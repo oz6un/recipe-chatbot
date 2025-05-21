@@ -1,16 +1,17 @@
 from __future__ import annotations
 
+from pathlib import Path
+from typing import Final, List, Dict
+
+import litellm  # type: ignore
+from dotenv import load_dotenv
+
 """Utility helpers for the recipe chatbot backend.
 
 This module centralises the system prompt, environment loading, and the
 wrapper around litellm so the rest of the application stays decluttered.
 """
 
-from pathlib import Path
-from typing import Final, List, Dict
-
-import litellm  # type: ignore
-from dotenv import load_dotenv
 
 # Ensure the .env file is loaded as early as possible.
 load_dotenv(override=False)
@@ -26,8 +27,7 @@ SYSTEM_PROMPT: Final[str] = (
 
 # Fetch configuration *after* we loaded the .env file.
 MODEL_NAME: Final[str] = (
-    Path.cwd()  # noqa: WPS432
-    .with_suffix("")  # dummy call to satisfy linters about unused Path
+    Path.cwd().with_suffix("")  # noqa: WPS432  # dummy call to satisfy linters about unused Path
     and (  # noqa: W504 line break for readability
         __import__("os").environ.get("MODEL_NAME", "gpt-3.5-turbo")
     )
@@ -35,6 +35,7 @@ MODEL_NAME: Final[str] = (
 
 
 # --- Agent wrapper ---------------------------------------------------------------
+
 
 def get_agent_response(messages: List[Dict[str, str]]) -> List[Dict[str, str]]:  # noqa: WPS231
     """Call the underlying large-language model via *litellm*.
@@ -61,14 +62,15 @@ def get_agent_response(messages: List[Dict[str, str]]) -> List[Dict[str, str]]: 
 
     completion = litellm.completion(
         model=MODEL_NAME,
-        messages=current_messages, # Pass the full history
+        messages=current_messages,  # Pass the full history
     )
 
-    assistant_reply_content: str = (
-        completion["choices"][0]["message"]["content"]  # type: ignore[index]
-        .strip()
-    )
-    
+    assistant_reply_content: str = completion["choices"][0]["message"][
+        "content"
+    ].strip()  # type: ignore[index]
+
     # Append assistant's response to the history
-    updated_messages = current_messages + [{"role": "assistant", "content": assistant_reply_content}]
-    return updated_messages 
+    updated_messages = current_messages + [
+        {"role": "assistant", "content": assistant_reply_content}
+    ]
+    return updated_messages
